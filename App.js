@@ -1,24 +1,43 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, Button } from 'react-native';
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
 
 export default function App() {
-  const [{x,y ,z}, setData] = useState({x: 0, y: 0, z: 0});
+  const [accelerometerData, setAccelerometerData] = useState({ x: 0, y: 0, z: 0 });
+  const [motionDetected, setMotionDetected] = useState(false);
+  const [accelerationMagnitude, setAccelerationMagnitude] = useState(0);
 
   useEffect(() => {
-    const subscription = Accelerometer.addListener(setData);
-    return () => subscription.remove();
+    const subscription = Accelerometer.addListener(accelerometerData => {
+      setAccelerometerData(accelerometerData);
+      const { x, y, z } = accelerometerData;
+      // Calculate the magnitude of acceleration vector
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+      setAccelerationMagnitude(magnitude);
+
+      // Check if magnitude exceeds threshold for motion detection
+      if (magnitude > 1.5) { // Adjust this threshold as needed
+        setMotionDetected(true);
+      } else {
+        setMotionDetected(false);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   return (
     <View style={styles.container}>
-        <Text>x: {x}</Text>
-        <Text>y: {y}</Text>
-        <Text style={{color: 'red'}}>z: {z}</Text>
-        <Button title='slow' onPress={() => Accelerometer.setUpdateInterval(2000)} />
-        <Button title="Fast" onPress={() => Accelerometer.setUpdateInterval(50)} />
-      <StatusBar style="auto" />
+      <Text style={styles.text}>Accelerometer Data:</Text>
+      <Text style={styles.text}>X: {accelerometerData.x.toFixed(2)}</Text>
+      <Text style={styles.text}>Y: {accelerometerData.y.toFixed(2)}</Text>
+      <Text style={styles.text}>Z: {accelerometerData.z.toFixed(2)}</Text>
+      <Text style={styles.text}>Acceleration Magnitude: {accelerationMagnitude.toFixed(2)}</Text>
+      <Text style={styles.text}>
+        {motionDetected ? 'Motion Detected!' : 'No Motion Detected'}
+      </Text>
     </View>
   );
 }
@@ -26,8 +45,12 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'center'
-  }
+    backgroundColor: '#fff',
+  },
+  text: {
+    fontSize: 20,
+    marginBottom: 10,
+  },
 });

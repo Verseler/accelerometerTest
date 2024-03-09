@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions" : ["android.permissions.HIGH_SAMPLING_RATE_SENSORS"]
+      "permissions" : ["android.permission.HIGH_SAMPLING_RATE_SENSORS"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
