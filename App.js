@@ -2,43 +2,51 @@ import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Accelerometer } from "expo-sensors";
 
-const LOW_PASS_ALPHA = 0.1; // Adjust this value to control the amount of smoothing
+// Smoothing factor for the low-pass filter
+// this will make the accelerometerData measures stable when the device is not moving
+const LOW_PASS_ALPHA = 0.1;
 
 export default function App() {
-  const [{ x, y, z }, setData] = useState({
+  const [accelerometerData, setAccelerometerData] = useState({
     x: 0,
     y: 0,
     z: 0,
   });
   const [subscription, setSubscription] = useState(null);
 
-  const _subscribe = () => {
-    setSubscription(Accelerometer.addListener((accelerometerData) => {
-      // Apply low-pass filter to accelerometer data
-      setData(prevData => ({
-        x: prevData.x + LOW_PASS_ALPHA * (accelerometerData.x - prevData.x),
-        y: prevData.y + LOW_PASS_ALPHA * (accelerometerData.y - prevData.y),
-        z: prevData.z + LOW_PASS_ALPHA * (accelerometerData.z - prevData.z),
-      }));
-    }));
+  const subscribeToAccelerometer = async () => {
+    try {
+      const newSubscription = await Accelerometer.addListener((newData) => {
+        setAccelerometerData((prevData) => ({
+          x: prevData.x + LOW_PASS_ALPHA * (newData.x - prevData.x),
+          y: prevData.y + LOW_PASS_ALPHA * (newData.y - prevData.y),
+          z: prevData.z + LOW_PASS_ALPHA * (newData.z - prevData.z),
+        }));
+      });
+      setSubscription(newSubscription);
+    } catch (error) {
+      console.error("Error subscribing to accelerometer:", error);
+    }
   };
 
-  const _unsubscribe = () => {
-    subscription && subscription.remove();
-    setSubscription(null);
+  const unsubscribeFromAccelerometer = () => {
+    if (subscription) {
+      subscription.remove();
+      setSubscription(null);
+    }
   };
 
   useEffect(() => {
-    _subscribe();
-    return () => _unsubscribe();
+    subscribeToAccelerometer();
+    return () => unsubscribeFromAccelerometer();
   }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Accelerometer</Text>
-      <Text style={styles.text}>x: {x.toFixed(2)}</Text>
-      <Text style={styles.text}>y: {y.toFixed(2)}</Text>
-      <Text style={styles.text}>z: {z.toFixed(2)}</Text>
+      <Text style={styles.text}>x: {accelerometerData.x.toFixed(2)}</Text>
+      <Text style={styles.text}>y: {accelerometerData.y.toFixed(2)}</Text>
+      <Text style={styles.text}>z: {accelerometerData.z.toFixed(2)}</Text>
     </View>
   );
 }
@@ -50,8 +58,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   header: {
-    fontWeight: "bold"
-  },  
+    fontWeight: "bold",
+  },
   text: {
     textAlign: "center",
   },
