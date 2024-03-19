@@ -1,43 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Accelerometer } from 'expo-sensors';
+import React, { useState, useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Accelerometer } from "expo-sensors";
+
+const LOW_PASS_ALPHA = 0.1; // Adjust this value to control the amount of smoothing
 
 export default function App() {
-  const [accelerometerData, setAccelerometerData] = useState({ x: 0, y: 0, z: 0 });
-  const [motionDetected, setMotionDetected] = useState(false);
-  const [accelerationMagnitude, setAccelerationMagnitude] = useState(0);
+  const [{ x, y, z }, setData] = useState({
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+  const [subscription, setSubscription] = useState(null);
+
+  const _subscribe = () => {
+    setSubscription(Accelerometer.addListener((accelerometerData) => {
+      // Apply low-pass filter to accelerometer data
+      setData(prevData => ({
+        x: prevData.x + LOW_PASS_ALPHA * (accelerometerData.x - prevData.x),
+        y: prevData.y + LOW_PASS_ALPHA * (accelerometerData.y - prevData.y),
+        z: prevData.z + LOW_PASS_ALPHA * (accelerometerData.z - prevData.z),
+      }));
+    }));
+  };
+
+  const _unsubscribe = () => {
+    subscription && subscription.remove();
+    setSubscription(null);
+  };
 
   useEffect(() => {
-    const subscription = Accelerometer.addListener(accelerometerData => {
-      setAccelerometerData(accelerometerData);
-      const { x, y, z } = accelerometerData;
-      // Calculate the magnitude of acceleration vector
-      const magnitude = Math.sqrt(x * x + y * y + z * z);
-      setAccelerationMagnitude(magnitude);
-
-      // Check if magnitude exceeds threshold for motion detection
-      if (magnitude > 1.5) { // Adjust this threshold as needed
-        setMotionDetected(true);
-      } else {
-        setMotionDetected(false);
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
+    _subscribe();
+    return () => _unsubscribe();
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Accelerometer Data:</Text>
-      <Text style={styles.text}>X: {accelerometerData.x.toFixed(2)}</Text>
-      <Text style={styles.text}>Y: {accelerometerData.y.toFixed(2)}</Text>
-      <Text style={styles.text}>Z: {accelerometerData.z.toFixed(2)}</Text>
-      <Text style={styles.text}>Acceleration Magnitude: {accelerationMagnitude.toFixed(2)}</Text>
-      <Text style={styles.text}>
-        {motionDetected ? 'Motion Detected!' : 'No Motion Detected'}
-      </Text>
+      <Text style={styles.header}>Accelerometer</Text>
+      <Text style={styles.text}>x: {x.toFixed(2)}</Text>
+      <Text style={styles.text}>y: {y.toFixed(2)}</Text>
+      <Text style={styles.text}>z: {z.toFixed(2)}</Text>
     </View>
   );
 }
@@ -45,12 +46,13 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
   },
+  header: {
+    fontWeight: "bold"
+  },  
   text: {
-    fontSize: 20,
-    marginBottom: 10,
+    textAlign: "center",
   },
 });
