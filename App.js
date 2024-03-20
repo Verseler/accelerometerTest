@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Accelerometer } from "expo-sensors";
 
-// Smoothing factor for the low-pass filter
-// this will make the accelerometerData measures stable when the device is not moving
-const LOW_PASS_ALPHA = 0.1;
+// Number of samples to consider for the moving average filter
+const MOVING_AVERAGE_WINDOW_SIZE = 5;
 
 export default function App() {
   const [accelerometerData, setAccelerometerData] = useState({
@@ -12,34 +11,52 @@ export default function App() {
     y: 0,
     z: 0,
   });
-  const [subscription, setSubscription] = useState(null);
+  const [accelerometerDataBuffer, setAccelerometerDataBuffer] = useState([]);
 
   const subscribeToAccelerometer = async () => {
     try {
-      const newSubscription = await Accelerometer.addListener((newData) => {
-        setAccelerometerData((prevData) => ({
-          x: prevData.x + LOW_PASS_ALPHA * (newData.x - prevData.x),
-          y: prevData.y + LOW_PASS_ALPHA * (newData.y - prevData.y),
-          z: prevData.z + LOW_PASS_ALPHA * (newData.z - prevData.z),
-        }));
-      });
-      setSubscription(newSubscription);
+      await Accelerometer.setUpdateInterval(100); // Set update interval to 100 ms
+      Accelerometer.addListener(handleAccelerometerData);
     } catch (error) {
       console.error("Error subscribing to accelerometer:", error);
     }
   };
 
-  const unsubscribeFromAccelerometer = () => {
-    if (subscription) {
-      subscription.remove();
-      setSubscription(null);
-    }
+  const handleAccelerometerData = (newData) => {
+    // Push new data to buffer
+    setAccelerometerDataBuffer((prevBuffer) => {
+      const newBuffer = [...prevBuffer, newData];
+      if (newBuffer.length > MOVING_AVERAGE_WINDOW_SIZE) {
+        newBuffer.shift(); // Remove oldest data point if buffer exceeds window size
+      }
+      return newBuffer;
+    });
   };
 
   useEffect(() => {
     subscribeToAccelerometer();
-    return () => unsubscribeFromAccelerometer();
+
+    // Clean up
+    return () => Accelerometer.removeAllListeners();
   }, []);
+
+  useEffect(() => {
+    // Calculate moving average for each axis
+    const sum = { x: 0, y: 0, z: 0 };
+    accelerometerDataBuffer.forEach((data) => {
+      sum.x += data.x;
+      sum.y += data.y;
+      sum.z += data.z;
+    });
+    const movingAverage = {
+      x: sum.x / accelerometerDataBuffer.length,
+      y: sum.y / accelerometerDataBuffer.length,
+      z: sum.z / accelerometerDataBuffer.length,
+    };
+
+    // Update accelerometer data with moving average
+    setAccelerometerData(movingAverage);
+  }, [accelerometerDataBuffer]);
 
   return (
     <View style={styles.container}>
