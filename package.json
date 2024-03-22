@@ -13,9 +13,10 @@
     "expo": "~50.0.13",
     "expo-sensors": "^12.9.1",
     "expo-status-bar": "~1.11.1",
+    "lpf": "^1.0.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-native": "0.73.5",
+    "react-native": "0.73.6",
     "react-native-sensors": "^7.3.6"
   },
   "devDependencies": {

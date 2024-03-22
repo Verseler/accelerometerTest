@@ -1,83 +1,41 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
 import { Accelerometer } from "expo-sensors";
+import { View, Text } from "react-native";
 
-// Number of samples to consider for the moving average filter
-const MOVING_AVERAGE_WINDOW_SIZE = 5;
+const App = () => {
+  const [motionData, setMotionData] = useState({ x: 0, y: 0, z: 0 });
+  const cutoffFrequency = 10; // Adjust based on your needs
 
-export default function App() {
-  const [accelerometerData, setAccelerometerData] = useState({
-    x: 0,
-    y: 0,
-    z: 0,
-  });
-  const [accelerometerDataBuffer, setAccelerometerDataBuffer] = useState([]);
-
-  const subscribeToAccelerometer = async () => {
-    try {
-      await Accelerometer.setUpdateInterval(100); // Set update interval to 100 ms
-      Accelerometer.addListener(handleAccelerometerData);
-    } catch (error) {
-      console.error("Error subscribing to accelerometer:", error);
-    }
+  const lowPassFilter = (value, previousValue) => {
+    const dt = 0.01; // Adjust dt based on your sampling time (in seconds)
+    const RC = 1 / (2 * Math.PI * cutoffFrequency);
+    const alpha = dt / (RC + dt);
+    return alpha * value + (1 - alpha) * previousValue; // Same logic as before
   };
+  React.useEffect(() => {
+    const subscription = Accelerometer.addListener((data) => {
+      const filteredX = lowPassFilter(data.x, motionData.x);
+      const filteredY = lowPassFilter(data.y, motionData.x);
+      const filteredZ = lowPassFilter(data.z, motionData.x);
 
-  const handleAccelerometerData = (newData) => {
-    // Push new data to buffer
-    setAccelerometerDataBuffer((prevBuffer) => {
-      const newBuffer = [...prevBuffer, newData];
-      if (newBuffer.length > MOVING_AVERAGE_WINDOW_SIZE) {
-        newBuffer.shift(); // Remove oldest data point if buffer exceeds window size
-      }
-      return newBuffer;
+      setMotionData({
+        x: filteredX,
+        y: filteredY,
+        z: filteredZ,
+      });
     });
-  };
 
-  useEffect(() => {
-    subscribeToAccelerometer();
-
-    // Clean up
-    return () => Accelerometer.removeAllListeners();
+    return () => subscription.remove();
   }, []);
 
-  useEffect(() => {
-    // Calculate moving average for each axis
-    const sum = { x: 0, y: 0, z: 0 };
-    accelerometerDataBuffer.forEach((data) => {
-      sum.x += data.x;
-      sum.y += data.y;
-      sum.z += data.z;
-    });
-    const movingAverage = {
-      x: sum.x / accelerometerDataBuffer.length,
-      y: sum.y / accelerometerDataBuffer.length,
-      z: sum.z / accelerometerDataBuffer.length,
-    };
-
-    // Update accelerometer data with moving average
-    setAccelerometerData(movingAverage);
-  }, [accelerometerDataBuffer]);
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Accelerometer</Text>
-      <Text style={styles.text}>x: {accelerometerData.x.toFixed(2)}</Text>
-      <Text style={styles.text}>y: {accelerometerData.y.toFixed(2)}</Text>
-      <Text style={styles.text}>z: {accelerometerData.z.toFixed(2)}</Text>
+    <View style={{height: "100%", alignItems: "center", justifyContent: "center"}}>
+     <Text style={{fontWeight: "bold"}}>Accelerometer</Text>
+     <Text>{motionData.x.toFixed(2)}</Text>
+     <Text>{motionData.y.toFixed(2)}</Text>
+     <Text>{motionData.z.toFixed(2)}</Text>
     </View>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  header: {
-    fontWeight: "bold",
-  },
-  text: {
-    textAlign: "center",
-  },
-});
+export default App;
