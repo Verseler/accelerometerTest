@@ -29,11 +29,18 @@ const App = () => {
   }, []);
 
   return (
-    <View style={{height: "100%", alignItems: "center", justifyContent: "center"}}>
-     <Text style={{fontWeight: "bold"}}>Accelerometer</Text>
-     <Text>{motionData.x.toFixed(2)}</Text>
-     <Text>{motionData.y.toFixed(2)}</Text>
-     <Text>{motionData.z.toFixed(2)}</Text>
+    <View
+      style={{ height: "100%", alignItems: "center", justifyContent: "center" }}
+    >
+      <Text style={{ fontWeight: "bold" }}>Accelerometer</Text>
+      <Text>Full Values:</Text>
+      <Text>{motionData.x}</Text>
+      <Text>{motionData.y}</Text>
+      <Text>{motionData.z}</Text>
+      <Text>2 Decimal Values:</Text>
+      <Text>{motionData.x.toFixed(2)}</Text>
+      <Text>{motionData.y.toFixed(2)}</Text>
+      <Text>{motionData.z.toFixed(2)}</Text>
     </View>
   );
 };
